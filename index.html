@@ -1,158 +1,313 @@
-<!-- Testimonials Section -->
-<div class="about ambala-section" data-aos="fade-right" data-aos-duration="1000">
-  <div class="main-section">
-      <div class="text-center mb-5">
-          <h3 class="ambala_heading mb-4">Testimonials from Our Respected Clients</h3>
-          <p class="ambala_paragraph">
-              Trusted by leading brands, we deliver exceptional software solutions that drive results.
-          </p>
-      </div>
-      <div class="container customr">
-          <div id="testimonial-slider" class="owl-carousel owl-theme">
-              @foreach ($reviews as $review)
-                  <div class="item">
-                      <div class="testimonial">
-                          <div class="testimonial-content">
-                              <p class="review-text">{!! $review->text !!}</p>
-                          </div>
-                          <div class="testimonial-info">
-                              <div class="pic">
-                                  <img class="img-fluid rounded-circle"
-                                       src="{{ asset('media/review/' . $review->image) }}"
-                                       alt="{{ $review->author }}">
-                              </div>
-                              <h3 class="testimonial-title">
-                                  <a href="#">{{ $review->author }}</a>
-                                  <small>{{ $review->role }}</small>
-                                  @if ($review->video_url)
-                                      <i class="fab fa-youtube youtube-icon" data-toggle="modal"
-                                         data-target="#youtubeModal{{ $review->id }}"
-                                         style="cursor: pointer; color: #FF0000;"></i>
-                                  @endif
-                              </h3>
-                          </div>
-                      </div>
-                  </div>
-              @endforeach
-          </div>
-      </div>
-  </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL Flower Cursor</title>
+  <style>html, body {
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+}
+
+.container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: start;
+}
+
+.clean-btn {
+    z-index: 1;
+    font-family: sans-serif;
+    font-size: 15px;
+    color: white;
+    text-shadow: 0 0 10px #000000;
+    user-select: none;
+    padding: 0 5px 15px 15px;
+    position: relative;
+    cursor: pointer;
+	 text-decoration: underline;
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+}
+
+.name {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    transform: translate(-50%, -50%);
+    color: white;
+    text-align: center;
+    font-size: 4vw;
+    text-shadow: 0 0 5px #000000;
+    user-select: none;
+    pointer-events: none;
+}
+
+@media all and (min-width: 640px) {
+    .name {
+        font-size: 45px
+    }
+}</style>
+</head>
+<body>
+  <div class="container">
+    <canvas id="canvas"></canvas>
+    <div class="clean-btn">
+        clean the screen
+    </div>
 </div>
 
-<!-- Modal for YouTube Videos -->
-@foreach ($reviews as $review)
-  @if ($review->video_url)
-      @php
-          // Convert the YouTube URL to an embeddable format
-          $embedUrl = str_replace('youtu.be/', 'www.youtube.com/embed/', $review->video_url);
-          $embedUrl = str_replace('watch?v=', 'embed/', $embedUrl);
-      @endphp
-      <div class="modal fade" id="youtubeModal{{ $review->id }}" tabindex="-1" role="dialog"
-           aria-labelledby="youtubeModalLabel{{ $review->id }}" aria-hidden="true">
-          <div class="modal-dialog modal-lg" role="document">
-              <div class="modal-content">
-                  <div class="" style="background: #000!important;">
-                      <div class="embed-responsive embed-responsive-16by9">
-                          <iframe class="embed-responsive-item" src="{{ $embedUrl }}" allowfullscreen></iframe>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </div>
-  @endif
-@endforeach
+<div class="name">
+take as much you want nowrin</div>
 
-<!-- Owl Carousel and jQuery Libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/1.3.3/owl.carousel.min.js"></script>
+<script type="x-shader/x-fragment" id="fragmentShader">
+    #define PI 3.14159265359
 
-<script>
-  $(document).ready(function() {
-      $("#testimonial-slider").owlCarousel({
-          items: 3,
-          itemsDesktop: [1000, 3],
-          itemsDesktopSmall: [979, 2],
-          itemsTablet: [768, 1],
-          pagination: true,
-          navigation: false,
-          slideSpeed: 1000,
-          autoPlay: true
-      });
-  });
+    uniform float u_ratio;
+    uniform float u_moving;
+    uniform float u_stop_time;
+    uniform float u_speed;
+    uniform vec2 u_stop_randomizer;
+    uniform float u_clean;
+    uniform vec2 u_point;
+    uniform sampler2D u_texture;
+    varying vec2 vUv;
+
+    float rand(vec2 n) {
+        return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
+    }
+    float noise(vec2 n) {
+        const vec2 d = vec2(0., 1.);
+        vec2 b = floor(n), f = smoothstep(vec2(0.), vec2(1.), fract(n));
+        return mix(mix(rand(b), rand(b + d.yx), f.x), mix(rand(b + d.xy), rand(b + d.yy), f.x), f.y);
+    }
+
+    float flower_shape(vec2 _point, float _size, float _outline, float _tickniess, float _noise, float _angle_offset) {
+        float random_by_uv = noise(vUv);
+
+        float petals_thickness = .5;
+        float petals_number = 5. + floor(u_stop_randomizer[0] * 4.);
+        float angle_animated_offset = .7 * (random_by_uv - .5) / (1. + 30. * u_stop_time);
+        float flower_angle = atan(_point.y, _point.x) - angle_animated_offset;
+        float flower_sectoral_shape = abs(sin(flower_angle * .5 * petals_number + _angle_offset)) + _tickniess * petals_thickness;
+
+        vec2 flower_size_range = vec2(4., 18.);
+        float flower_radial_shape = length(_point) * (flower_size_range[0] + flower_size_range[1] * u_stop_randomizer[0]);
+        float radius_noise = sin(flower_angle * 13. + 15. * random_by_uv);
+        flower_radial_shape += _noise * radius_noise;
+
+        float flower_radius_grow = min(20000. * u_stop_time, 1.);
+        flower_radius_grow = 1. / flower_radius_grow;
+
+        float flower_shape = 1. - smoothstep(0., _size * flower_sectoral_shape, _outline * flower_radius_grow * flower_radial_shape);
+        flower_shape *= (1. - u_moving);
+
+        flower_shape *= (1. - step(1., u_stop_time));
+
+        return flower_shape;
+    }
+
+    void main() {
+
+        vec3 base = texture2D(u_texture, vUv).xyz;
+        vec2 cursor = vUv - u_point.xy;
+        cursor.x *= u_ratio;
+
+        // ========================================
+        // STEM
+
+        vec3 stem_color = vec3(0., 2., 1.5);
+        float stem_radius = .003 * u_speed * u_moving;
+        float stem_shape = 1. - pow(smoothstep(0., stem_radius, dot(cursor, cursor)), .03);
+        vec3 stem = stem_shape * stem_color;
+
+        // ========================================
+        // FLOWER
+
+        // flower_shape:
+        // - center
+        // - size coefficient
+        // - bright outline width
+        // - extra sectoral weight
+        // - noise power
+        // - angle offset
+
+        vec3 flower_color = vec3(.7 + u_stop_randomizer[1], .8 * u_stop_randomizer[1], 2.9 + u_stop_randomizer[0] * .6);
+        vec3 flower_new = flower_color * flower_shape(cursor, 1., .96, 1., .15, 0.);
+        vec3 flower_mask = 1. - vec3(flower_shape(cursor, 1.05, 1.07, 1., .15, 0.));
+        vec3 flower_mid = vec3(-.6) * flower_shape(cursor, .15, 1., 2., .1, 1.9);
+
+        vec3 color = base * flower_mask + (flower_new + flower_mid + stem);
+        color *= u_clean;
+        color = clamp(color, vec3(.0, .0, .15), vec3(1., 1., .4));
+
+        gl_FragColor = vec4(color, 1.);
+    }
+
 </script>
 
-<!-- CSS Styles -->
-<style>
-  .testimonial {
-      margin: 0px 30px;
-      background-color: #fff;
-      text-align: center;
-      color: #1C743E;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      padding: 40px;
-      position: relative;
-  }
+<script>import * as THREE from "https://cdn.skypack.dev/three@0.139.1/build/three.module";
 
-  .testimonial-content {
-      padding: 20px 30px;
-      font-size: 15px;
-      line-height: 1.6;
-      text-align: left;
-      color: #555;
-      position: relative;
+  const canvasEl = document.querySelector("#canvas");
+  const cleanBtn = document.querySelector(".clean-btn");
+  
+  const pointer = {
+      x: .5,
+      y: .65,
+      moved: false,
+      speed: 0,
+      vanishCanvas: false,
+      drawingAllowed: true,
+  };
+  window.setTimeout(() => {
+      pointer.x = .7;
+      pointer.y = .5;
+      pointer.moved = true;
+  }, 400);
+  
+  let basicMaterial, shaderMaterial;
+  
+  let renderer = new THREE.WebGLRenderer({
+      canvas: canvasEl,
+      alpha: true,
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  let sceneShader = new THREE.Scene();
+  let sceneBasic = new THREE.Scene();
+  let camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
+  let clock = new THREE.Clock();
+  
+  let renderTargets = [
+      new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight),
+      new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight)
+  ];
+  
+  createPlane();
+  updateSize();
+  window.addEventListener("resize", () => {
+      cleanCanvas();
+      updateSize();
+  });
+  
+  render();
+  
+  window.addEventListener("mousemove", (e) => {
+      if (pointer.drawingAllowed) {
+          pointer.moved = true;
+          const dx = 12 * (e.pageX / window.innerWidth - pointer.x);
+          const dy = 12 * (e.pageY / window.innerHeight - pointer.y);
+          pointer.x = e.pageX / window.innerWidth;
+          pointer.y = e.pageY / window.innerHeight;
+          pointer.speed = Math.min(2, Math.pow(dx, 2) + Math.pow(dy, 2));
+      }
+  });
+  canvasEl.addEventListener("click", (e) => {
+      pointer.x = e.pageX / window.innerWidth;
+      pointer.y = e.pageY / window.innerHeight;
+      pointer.drawingAllowed = !pointer.drawingAllowed;
+      if (pointer.drawingAllowed) {
+          pointer.moved = true;
+      }
+  });
+  window.addEventListener("touchmove", (e) => {
+      pointer.moved = true;
+      const dx = 5 * (e.targetTouches[0].pageX / window.innerWidth - pointer.x);
+      const dy = 5 * (e.targetTouches[0].pageY / window.innerHeight - pointer.y);
+      pointer.x = e.targetTouches[0].pageX / window.innerWidth;
+      pointer.y = e.targetTouches[0].pageY / window.innerHeight;
+      pointer.speed = Math.min(2, 20 * (Math.pow(dx, 2) + Math.pow(dy, 2)));
+  });
+  
+  window.addEventListener("keydown", (e) => {
+      if (e.key === " ") {
+          cleanCanvas();
+      }
+  });
+  // window.addEventListener("dblclick", cleanCanvas);
+  cleanBtn.addEventListener("click", cleanCanvas);
+  
+  function cleanCanvas() {
+      pointer.vanishCanvas = true;
+      setTimeout(() => {
+          pointer.vanishCanvas = false;
+      }, 50);
   }
-
-  .testimonial .pic {
-      display: inline-block;
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      overflow: hidden;
-      margin-bottom: 15px;
+  
+  function createPlane() {
+      shaderMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+              u_stop_time: {type: "f", value: 0.},
+              u_point: {type: "v2", value: new THREE.Vector2(pointer.x, pointer.y)},
+              u_moving: {type: "f", value: 0.},
+              u_speed: {type: "f", value: 0.},
+              u_stop_randomizer: {type: "v2", value: new THREE.Vector2(Math.random(), Math.random())},
+              u_clean: {type: "f", value: 1.},
+              u_ratio: {type: "f", value: window.innerWidth / window.innerHeight},
+              u_texture: {type: "t", value: null}
+          },
+          vertexShader: document.getElementById("vertexShader").textContent,
+          fragmentShader: document.getElementById("fragmentShader").textContent
+      });
+      basicMaterial = new THREE.MeshBasicMaterial();
+  
+      const planeGeometry = new THREE.PlaneGeometry(2, 2);
+      const planeBasic = new THREE.Mesh(planeGeometry, basicMaterial);
+      const planeShader = new THREE.Mesh(planeGeometry, shaderMaterial);
+      sceneBasic.add(planeBasic);
+      sceneShader.add(planeShader);
   }
-
-  .testimonial .pic img {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      object-fit: cover;
+  
+  function render() {
+      shaderMaterial.uniforms.u_clean.value = pointer.vanishCanvas ? 0 : 1;
+      shaderMaterial.uniforms.u_point.value = new THREE.Vector2(pointer.x, 1 - pointer.y);
+      shaderMaterial.uniforms.u_texture.value = renderTargets[0].texture;
+      shaderMaterial.uniforms.u_ratio.value = window.innerWidth / window.innerHeight;
+      if (pointer.moved) {
+          shaderMaterial.uniforms.u_moving.value = 1.;
+          shaderMaterial.uniforms.u_stop_randomizer.value = new THREE.Vector2(Math.random(), Math.random());
+          if (window.innerWidth < 650) {
+              shaderMaterial.uniforms.u_stop_randomizer.value.x *= .2;
+              shaderMaterial.uniforms.u_stop_randomizer.value.x += .8;
+          }
+          shaderMaterial.uniforms.u_stop_time.value = 0.;
+          pointer.moved = false;
+      } else {
+          shaderMaterial.uniforms.u_moving.value = 0.;
+      }
+      shaderMaterial.uniforms.u_stop_time.value += clock.getDelta();
+      shaderMaterial.uniforms.u_speed.value = pointer.speed;
+  
+      renderer.setRenderTarget(renderTargets[1]);
+      renderer.render(sceneShader, camera);
+  
+      basicMaterial.map = renderTargets[1].texture;
+  
+      renderer.setRenderTarget(null);
+      renderer.render(sceneBasic, camera);
+  
+      let tmp = renderTargets[0];
+      renderTargets[0] = renderTargets[1];
+      renderTargets[1] = tmp;
+  
+      requestAnimationFrame(render);
   }
-
-  .testimonial .testimonial-title {
-      margin-top: 10px;
-      font-size: 18px;
-      color: #1C743E;
-      font-weight: 700;
+  
+  function updateSize() {
+      shaderMaterial.uniforms.u_ratio.value = window.innerWidth / window.innerHeight;
+      renderer.setSize(window.innerWidth, window.innerHeight);
   }
-
-  .testimonial .testimonial-title a {
-      color: #1C743E;
-      text-decoration: none;
-  }
-
-  .testimonial .testimonial-title small {
-      display: block;
-      color: #888;
-  }
-
-  .testimonial .youtube-icon {
-      font-size: 24px;
-      margin-left: 10px;
-      color: #FF0000;
-      cursor: pointer;
-  }
-
-  .owl-theme .owl-controls .owl-page span {
-      height: 12px;
-      width: 12px;
-      background-color: #1C743E;
-      border-radius: 0;
-      opacity: 0.8;
-      transform: rotate(45deg);
-  }
-
-  .owl-theme .owl-controls .owl-page.active span,
-  .owl-theme .owl-controls .owl-page:hover span {
-      background-color: #A58E38;
-  }
-</style>
+  </script>
+</body>
+</html>
